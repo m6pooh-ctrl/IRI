@@ -2,32 +2,45 @@
 
 import { useState } from 'react'
 
+type Tab = 'user' | 'admin'
+type Step = 'input' | 'kakao'
+
 export default function LoginPage() {
-  const [key, setKey] = useState('')
-  const [step, setStep] = useState<'key' | 'kakao'>('key')
+  const [tab, setTab] = useState<Tab>('user')
+  const [step, setStep] = useState<Step>('input')
+  const [value, setValue] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleKeySubmit(e: React.FormEvent) {
+  function switchTab(t: Tab) {
+    setTab(t); setStep('input'); setValue(''); setError('')
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!key.trim()) return
-    setLoading(true)
-    setError('')
+    if (!value.trim()) return
+    setLoading(true); setError('')
+
+    const body = tab === 'admin'
+      ? { type: 'admin', password: value }
+      : { type: 'nk', key: value.toUpperCase() }
 
     const res = await fetch('/api/auth/pre-activate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: key.trim() }),
+      body: JSON.stringify(body),
     })
     const data = await res.json()
 
     if (data.ok) {
       setStep('kakao')
     } else {
-      setError(data.error ?? '유효하지 않은 키입니다.')
+      setError(data.error ?? '오류가 발생했습니다.')
     }
     setLoading(false)
   }
+
+  const isAdmin = tab === 'admin'
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -38,20 +51,42 @@ export default function LoginPage() {
           <h1 className="text-xl font-bold text-gray-800 mt-2">IRI n blog</h1>
         </div>
 
-        {step === 'key' ? (
+        {/* 탭 */}
+        <div className="flex w-full gap-1 rounded-xl bg-gray-100 p-1">
+          <button
+            onClick={() => switchTab('user')}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${tab === 'user' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+          >
+            일반 사용자
+          </button>
+          <button
+            onClick={() => switchTab('admin')}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${tab === 'admin' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+          >
+            관리자
+          </button>
+        </div>
+
+        {step === 'input' ? (
           <>
             <div className="text-center">
-              <p className="text-sm font-semibold text-gray-700">입장키 확인</p>
-              <p className="text-xs text-gray-400 mt-1">관리자로부터 발급받은 NK 키를 입력하세요.</p>
+              <p className="text-sm font-semibold text-gray-700">
+                {isAdmin ? '관리자 비밀번호 입력' : '입장키 입력'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {isAdmin
+                  ? '관리자 비밀번호를 입력하세요.'
+                  : '관리자로부터 발급받은 NK 키를 입력하세요.'}
+              </p>
             </div>
 
-            <form onSubmit={handleKeySubmit} className="w-full flex flex-col gap-3">
+            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
               <input
-                type="text"
-                value={key}
-                onChange={e => setKey(e.target.value.toUpperCase())}
-                placeholder="NK-YYYYMMDD-XXXXXXXXXXXX"
-                className="w-full border rounded-xl px-4 py-3 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-300 text-center"
+                type={isAdmin ? 'password' : 'text'}
+                value={value}
+                onChange={e => setValue(isAdmin ? e.target.value : e.target.value.toUpperCase())}
+                placeholder={isAdmin ? '비밀번호' : 'NK-YYYYMMDD-XXXXXXXXXXXX'}
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 ${isAdmin ? 'focus:ring-gray-300' : 'font-mono tracking-wider text-center focus:ring-blue-300'}`}
                 autoFocus
               />
               {error && (
@@ -61,8 +96,9 @@ export default function LoginPage() {
               )}
               <button
                 type="submit"
-                disabled={loading || !key.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3 rounded-xl transition"
+                disabled={loading || !value.trim()}
+                className={`w-full font-semibold py-3 rounded-xl transition disabled:bg-gray-200 disabled:text-gray-400 text-white
+                  ${isAdmin ? 'bg-gray-800 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 {loading ? '확인 중…' : '확인'}
               </button>
@@ -71,8 +107,10 @@ export default function LoginPage() {
         ) : (
           <>
             <div className="text-center">
-              <div className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5">
-                <span className="text-green-600 text-sm font-semibold">✓ 입장키 확인 완료</span>
+              <div className={`mb-3 flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 ${isAdmin ? 'bg-gray-50 border-gray-200' : 'bg-green-50 border-green-200'}`}>
+                <span className={`text-sm font-semibold ${isAdmin ? 'text-gray-700' : 'text-green-600'}`}>
+                  ✓ {isAdmin ? '관리자 확인 완료' : '입장키 확인 완료'}
+                </span>
               </div>
               <p className="text-sm font-semibold text-gray-700">카카오로 로그인</p>
               <p className="text-xs text-gray-400 mt-1">카카오 계정으로 본인 인증을 완료하세요.</p>
@@ -89,10 +127,10 @@ export default function LoginPage() {
             </a>
 
             <button
-              onClick={() => { setStep('key'); setKey(''); setError('') }}
+              onClick={() => { setStep('input'); setValue(''); setError('') }}
               className="text-xs text-gray-400 hover:text-gray-600"
             >
-              ← 입장키 다시 입력
+              ← 다시 입력
             </button>
           </>
         )}

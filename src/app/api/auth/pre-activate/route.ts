@@ -1,17 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateNKKey } from '@/lib/nk'
 
-// NK키 사전 검증 — 카카오 로그인 전에 키 유효성 확인 후 임시 쿠키 발급
+// 카카오 로그인 전 사전 인증 — NK키(일반) 또는 관리자 비번(관리자) 검증
 export async function POST(req: NextRequest) {
-  const { key } = await req.json()
-  const result = validateNKKey(key ?? '')
+  const { type, key, password } = await req.json()
 
+  if (type === 'admin') {
+    const adminPw = process.env.ADMIN_PASSWORD
+    if (!adminPw || password !== adminPw) {
+      return NextResponse.json({ error: '관리자 비밀번호가 올바르지 않습니다.' }, { status: 400 })
+    }
+    const res = NextResponse.json({ ok: true })
+    res.cookies.set('admin_preauth', '1', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 10,
+      path: '/',
+    })
+    return res
+  }
+
+  // 일반 사용자 — NK 입장키 검증
+  const result = validateNKKey(key ?? '')
   if (!result.valid) {
     return NextResponse.json({ error: result.reason }, { status: 400 })
   }
 
   const res = NextResponse.json({ ok: true })
-  // 10분 유효 임시 쿠키 — 카카오 콜백에서 검증 후 세션에 nk_valid 반영
   res.cookies.set('nk_preauth', key.trim().toUpperCase(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

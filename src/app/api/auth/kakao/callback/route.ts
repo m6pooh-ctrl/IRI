@@ -32,18 +32,22 @@ export async function GET(req: NextRequest) {
   })
   const user = await userRes.json()
 
-  // NK 사전 인증 쿠키 확인 — 카카오 로그인 전 NK키를 검증했다면 즉시 활성화
-  const preauth = req.cookies.get('nk_preauth')?.value ?? ''
-  const nkValid = preauth ? validateNKKey(preauth).valid : false
+  // 사전 인증 쿠키 확인
+  const adminPreauth = req.cookies.get('admin_preauth')?.value
+  const nkPreauth = req.cookies.get('nk_preauth')?.value
+
+  const isAdmin = adminPreauth === '1'
+  const nkValid = isAdmin || (nkPreauth ? validateNKKey(nkPreauth).valid : false)
 
   const session = {
     id: user.id,
     nickname: user.kakao_account?.profile?.nickname ?? '사용자',
     avatar: user.kakao_account?.profile?.profile_image_url ?? null,
     nk_valid: nkValid,
+    is_admin: isAdmin,
   }
 
-  const res = NextResponse.redirect(new URL('/', req.url))
+  const res = NextResponse.redirect(new URL(isAdmin ? '/admin' : '/', req.url))
   res.cookies.set('session', Buffer.from(JSON.stringify(session)).toString('base64'), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -51,6 +55,7 @@ export async function GET(req: NextRequest) {
     path: '/',
   })
   // 임시 쿠키 제거
+  res.cookies.delete('admin_preauth')
   res.cookies.delete('nk_preauth')
   return res
 }
