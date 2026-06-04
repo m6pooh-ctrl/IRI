@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateNKKey } from '@/lib/nk'
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
@@ -21,8 +22,8 @@ export async function GET(req: NextRequest) {
   const token = await tokenRes.json()
 
   if (!token.access_token) {
-    const code = encodeURIComponent(token.error_code ?? token.error ?? 'token_fail')
-    return NextResponse.redirect(new URL(`/login?error=${code}`, req.url))
+    const errCode = encodeURIComponent(token.error_code ?? token.error ?? 'token_fail')
+    return NextResponse.redirect(new URL(`/login?error=${errCode}`, req.url))
   }
 
   // 사용자 정보 조회
@@ -31,18 +32,25 @@ export async function GET(req: NextRequest) {
   })
   const user = await userRes.json()
 
+  // NK 사전 인증 쿠키 확인 — 카카오 로그인 전 NK키를 검증했다면 즉시 활성화
+  const preauth = req.cookies.get('nk_preauth')?.value ?? ''
+  const nkValid = preauth ? validateNKKey(preauth).valid : false
+
   const session = {
     id: user.id,
     nickname: user.kakao_account?.profile?.nickname ?? '사용자',
     avatar: user.kakao_account?.profile?.profile_image_url ?? null,
+    nk_valid: nkValid,
   }
 
   const res = NextResponse.redirect(new URL('/', req.url))
   res.cookies.set('session', Buffer.from(JSON.stringify(session)).toString('base64'), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7, // 7일
+    maxAge: 60 * 60 * 24 * 7,
     path: '/',
   })
+  // 임시 쿠키 제거
+  res.cookies.delete('nk_preauth')
   return res
 }
