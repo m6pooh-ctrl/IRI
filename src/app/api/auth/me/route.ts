@@ -10,6 +10,7 @@ export async function GET() {
       nickname: user.nickname,
       avatar: user.avatar,
       nk_valid: user.nk_valid ?? false,
+      is_admin: user.is_admin ?? false,
     },
   })
 }

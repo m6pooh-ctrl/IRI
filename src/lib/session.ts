@@ -5,6 +5,7 @@ export type SessionUser = {
   nickname: string
   avatar: string | null
   nk_valid?: boolean
+  is_admin?: boolean
 }
 
 export async function getSession(): Promise<SessionUser | null> {

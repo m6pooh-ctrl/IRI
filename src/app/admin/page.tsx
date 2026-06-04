@@ -44,8 +44,11 @@ export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistory(loadHistory()); setFeatures(loadFeatures())
+    // 관리자 탭으로 로그인한 경우 비번 게이트 자동 통과
+    fetch('/api/auth/me').then(r => r.json()).then(d => {
+      if (d.user?.is_admin) setUnlocked(true)
+    }).catch(() => {})
   }, [])
 
   function toggleFeature(k: FeatureKey) {
