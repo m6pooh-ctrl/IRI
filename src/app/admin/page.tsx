@@ -121,12 +121,8 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-gray-50 py-10 px-4 relative">
 
-      {/* 관리자 콘텐츠 (잠금 시 흐리게) */}
-      <div
-        className={`max-w-2xl mx-auto flex flex-col gap-6 transition-all duration-300 ${
-          !unlocked ? 'blur-sm pointer-events-none select-none opacity-40' : ''
-        }`}
-      >
+      {/* 관리자 콘텐츠 (잠금 시에만 표시되는 더미 블러 배경) */}
+      {!unlocked && <div className="max-w-2xl mx-auto flex flex-col gap-6 blur-sm pointer-events-none select-none opacity-40">
         {/* 발급 폼 */}
         <div className="bg-white rounded-2xl shadow-md p-8 flex flex-col gap-5">
           <h1 className="text-xl font-bold text-gray-800 text-center">관리자 — NK 키 발급</h1>
@@ -183,7 +179,7 @@ export default function AdminPage() {
             ))}
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* 비밀번호 오버레이 */}
       {!unlocked && (
