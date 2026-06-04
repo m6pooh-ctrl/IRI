@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     is_admin: isAdmin,
   }
 
-  const res = NextResponse.redirect(new URL(isAdmin ? '/admin' : '/', req.url))
+  const res = NextResponse.redirect(new URL('/', req.url))
   res.cookies.set('session', Buffer.from(JSON.stringify(session)).toString('base64'), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
